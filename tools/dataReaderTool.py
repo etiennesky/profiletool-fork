@@ -34,6 +34,13 @@ from math import sqrt
 
 import platform
 
+from plottingtool import *
+
+from shapely.wkb import loads
+#from shapely import wkb
+#import shapely
+from pprint import pprint
+
 
 class DataReaderTool:
 
@@ -44,7 +51,7 @@ class DataReaderTool:
 		"""
 		Return a dictionnary : {"layer" : layer read, 
 								"band" : band read, 
-								"l" : array of computed lenght, 
+								"l" : array of computed length, 
 								"z" : array of computed z ,
 								"curve" : qwtplot curve } 
 		"""
@@ -74,14 +81,58 @@ class DataReaderTool:
 			y1C = float(pointstoCal1.y())
 			x2C = float(pointstoCal2.x())
 			y2C = float(pointstoCal2.y())
-			#lenght between (x1,y1) and (x2,y2)
+			#length between (x1,y1) and (x2,y2)
 			tlC = sqrt (((x2C-x1C)*(x2C-x1C)) + ((y2C-y1C)*(y2C-y1C)))
+
+                        print(str(i) + ' - ' + str(tlC) + ' - ' + str(type(layer)))
+
+                        #TODO handle i=0, will miss one point...
+                        if isinstance( layer, ElevationLayer ):
+                                print("layer is elevation")
+                                if i == 0:
+                                        l += [tlC]
+                                else:
+                                        l +=  [ l[i-1] + tlC ]
+                                continue
+                        elif layer.type() == QgsMapLayer.VectorLayer:
+                                print("layer is a vector")
+                                if i == 0:
+                                        l += [tlC]
+                                else:
+                                        l +=  [ l[i-1] + tlC ]
+				#z += [self.pointstoDraw[i+1][0]]
+                                z += [0]
+                                feat = QgsFeature()
+                                provider = layer.dataProvider()
+                                provider.select(provider.attributeIndexes())
+                                # fetch first feature, test it is a multilinestring
+                                if not provider.nextFeature(feat):
+                                        continue
+                                if feat.geometry().wkbType() != QGis.WKBMultiLineString25D:
+                                        continue
+                                #print("layer is linestring!")
+                                lines = loads(feat.geometry().asWkb())
+                                #print(str(lines))
+                                if len(lines) != 1: 
+                                        continue
+                                #for coord in lines[0].coords:
+                                #        pprint(coord)
+                                coords = lines[0].coords
+                                print('size: '+len(coords))
+                                if len(coords) < i:
+                                        continue
+                                (x,y,z[i]) = coords[i]
+                                #z[i] = z[i] + 10
+                                print("values: "+str(x)+" "+str(y)+" "+str(z[i])+" "+str(coords[i]))
+                                continue
+
 			#Set the res of calcul
+                        layer_units = layer.rasterUnitsPerPixel()
 			try:
-				res = self.profiles["layer"].rasterUnitsPerPixel() * tlC / max(abs(x2C-x1C), abs(y2C-y1C))    # res depend on the angle of ligne with normal
+				res = layer_units * tlC / max(abs(x2C-x1C), abs(y2C-y1C))    # res depend on the angle of line with normal
 			except ZeroDivisionError:
-				res = layer.rasterUnitsPerPixel() * 1.2
-			#enventually use bigger step, wether full res is selected or not
+				res = layer_units * 1.2
+			#eventually use bigger step, whether full res is selected or not
 			steps = 1000  # max graph width in pixels
 			if fullresolution1:
 				steps = int(tlC/res)
@@ -127,6 +178,8 @@ class DataReaderTool:
 					self.iface.mainWindow().statusBar().showMessage(QString(progress))
 			lbefore = l[len(l)-1]
 		#End of polyline analysis
+                print("l: "+str(l))
+                print("z: "+str(z))
 		#filling the main data dictionary "profiles"
 		self.profiles["l"] = l
 		self.profiles["z"] = z

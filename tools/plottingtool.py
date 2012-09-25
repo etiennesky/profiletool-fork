@@ -41,7 +41,57 @@ try:
 except:
 	pass	
 
+#class ElevationLayer(QgsMapLayer):
 	
+#    def __init__(self, name):
+#            QgsMapLayer.__init__(self, QgsMapLayer.PluginLayer, name)
+
+class ElevationLayer():
+	
+    def __init__(self, name):
+            #QgsMapLayer.__init__(self, QgsMapLayer.PluginLayer, name)
+            n = name
+
+    def name(self):
+        return n
+
+#    def rasterUnitsPerPixel(self):
+#            return 1
+
+#    def identify(self,point):
+#            print('identify :'+str(point))
+#            return point.x()
+
+#    def elevaTionAt(self,i,pos ):
+#            if name
+
+#                                        # fetch first feature, test it is a multilinestring
+#                                        while provider.nextFeature(feat):
+#                                                geom = feat.geometry()
+#                                                multi = geom.asMultiPolyline()
+#                                                print("Feature ID %d: typeName: %s " % (feat.id(),feat.typeName()))
+#                                                print("read feature, wkbType="+str(feat.geometry().wkbType())+" / "+str(QGis.WKBMultiLineString)+" / "+str(QGis.WKBMultiLineString25D))
+#                                                print("multipart: "+str(geom.isMultipart())+" - "+str(multi))
+#                                                print("parts:" +str(geom))
+#                                                print("wkt:" +str(geom.exportToWkt()))
+#                                                #wkb = shapely.wkb.loads(wkb)
+#                                                wkb = loads(geom.asWkb())
+#                                                print("wkb: "+str(wkb.wkt))
+#                                                print("type: "+str(type(wkb)))
+#                                                print("has_z: "+str(wkb.has_z))
+#                                                print("dir: "+str(dir(wkb)))
+#                                                print("geoms: ")
+#                                                pprint(wkb[0].coords)
+#                                                for coord in wkb[0].coords:
+#                                                        pprint(coord)
+#                                                        pprint(str(type(coord)))
+#                                                if feat.geometry().wkbType() == QGis.WKBMultiLineString25D:
+#                                                #if feat.geometry().aswkbType() == QGis.WKBMultiLineString:
+#                                                        print("is linestring!")
+#                                                        addlayer = True
+#                                                        break
+
+
 
 class PlottingTool:
 

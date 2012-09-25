@@ -29,29 +29,46 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from plottingtool import *
 
-
 class TableViewTool:
 	
 	def addLayer(self , iface, mdl, layer1 = None):
+                layerName = ''
 		if layer1 == None:
+                        # get list of existing layers so we don't add duplicates
+                        existing=[]
+                        for j in range(0, mdl.rowCount()):
+                                existing += str(mdl.item(j,2).data(Qt.EditRole).toPyObject())
+                        # add layers to list 
 			templist=[]
-			j=0
-			# Ask the layer by a input dialog 
 			for i in range(0, iface.mapCanvas().layerCount()):
-				donothing = False
+				addlayer = False
 				layer = iface.mapCanvas().layer(i)
-				if layer.type() == layer.RasterLayer:
-					for j in range(0, mdl.rowCount()):
-						if str(mdl.item(j,2).data(Qt.EditRole).toPyObject()) == str(layer.name()):
-							donothing = True
-				else:
-					donothing = True
-					
-				if donothing == False:
+                                print("layer: "+str(layer.name()))
+                                if str(layer.name()) in existing:
+                                        addlayer = False
+				elif layer.type() == QgsMapLayer.RasterLayer:
+                                        addlayer = True
+                                elif layer.type() == QgsMapLayer.VectorLayer and layer.geometryType() == QGis.Line:
+                                        print("is line vector!")
+                                        feat = QgsFeature()
+                                        provider = layer.dataProvider()
+                                        provider.select(provider.attributeIndexes())
+                                        # fetch first feature, test it is a multilinestring
+                                        if provider.nextFeature(feat):
+                                                if feat.geometry().wkbType() == QGis.WKBMultiLineString25D:
+                                                        print("is linestring!")
+                                                        addlayer = True
+
+				if addlayer:
 					templist +=  [[layer, layer.name()]]
-						
+
+                        # Add geonames layer
+                        templist +=  [[None, "Geonames Elevation"]]
+                        #templist +=  [[None, "Track Elevation"]]
+                        
+			# Ask the layer by a input dialog 
 			if len(templist) == 0:
-				QMessageBox.warning(iface.mainWindow(), "Profile tool", "No raster to add")
+				QMessageBox.warning(iface.mainWindow(), "Profile tool", "No layer to add")
 				return
 			else:	
 				testqt, ok = QInputDialog.getItem(iface.mainWindow(), "Layer selector", "Choose layer", [templist[k][1] for k in range( len(templist) )], False)
@@ -59,36 +76,41 @@ class TableViewTool:
 					for i in range (0,len(templist)):
 						if templist[i][1] == testqt:
 							layer2 = templist[i][0]
+                                                        layerName = templist[i][1]
 				else: return
 		else : 
 			layer2 = layer1
 
 		# Ask the Band by a input dialog
-		if layer2.bandCount() != 1:
+		if layer2 is not None and layer2.type() == QgsMapLayer.RasterLayer and layer2.bandCount() != 1:
 			listband = []
 			for i in range(0,layer2.bandCount()):
 				listband.append(str(i+1))
 			testqt, ok = QInputDialog.getItem(iface.mainWindow(), "Band selector", "Choose the band", listband, False)
 			if ok :
-				choosenBand = int(testqt) - 1
+				chosenBand = int(testqt) - 1
 			else:
 				return 2
 		else:
-			choosenBand = 0
+			chosenBand = 0
 
 		#Complete the tableview
-		row = mdl.rowCount()
-		mdl.insertRow(row)
-		mdl.setData( mdl.index(row, 0, QModelIndex())  ,QVariant(True), Qt.CheckStateRole)
-		mdl.item(row,0).setFlags(Qt.ItemIsSelectable) 
-		mdl.setData( mdl.index(row, 1, QModelIndex())  ,QVariant(QColor(Qt.red)) , Qt.BackgroundRole)
-		mdl.item(row,1).setFlags(Qt.NoItemFlags) 
-		mdl.setData( mdl.index(row, 2, QModelIndex())  ,QVariant(layer2.name()))
-		mdl.item(row,2).setFlags(Qt.NoItemFlags) 
-		mdl.setData( mdl.index(row, 3, QModelIndex())  ,QVariant(choosenBand + 1))
-		mdl.item(row,3).setFlags(Qt.NoItemFlags) 
-		mdl.setData( mdl.index(row, 4, QModelIndex())  ,layer2)
-		mdl.item(row,4).setFlags(Qt.NoItemFlags) 
+                row = mdl.rowCount()
+                mdl.insertRow(row)
+                mdl.setData( mdl.index(row, 0, QModelIndex())  ,QVariant(True), Qt.CheckStateRole)
+                mdl.item(row,0).setFlags(Qt.ItemIsSelectable) 
+                mdl.setData( mdl.index(row, 1, QModelIndex())  ,QVariant(QColor(Qt.red)) , Qt.BackgroundRole)
+                mdl.item(row,1).setFlags(Qt.NoItemFlags)               
+                if layer2 is not None:
+                        layerName = layer2.name()
+                else:
+                        layer2 = ElevationLayer( layerName )
+                mdl.setData( mdl.index(row, 2, QModelIndex())  ,QVariant(layerName))
+                mdl.item(row,2).setFlags(Qt.NoItemFlags) 
+                mdl.setData( mdl.index(row, 3, QModelIndex())  ,QVariant(chosenBand + 1))
+                mdl.item(row,3).setFlags(Qt.NoItemFlags) 
+                mdl.setData( mdl.index(row, 4, QModelIndex())  ,layer2)
+                mdl.item(row,4).setFlags(Qt.NoItemFlags) 
 		
 		
 	def removeLayer(self, iface, mdl):
